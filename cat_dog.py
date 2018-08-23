@@ -31,4 +31,4 @@ history = model.fit_generator(
         validation_data = validation_generator,
         validation_steps = 50)
 
-models.save('cats_and_dogs_small_1.h5')
+model.save('cats_and_dogs_small_2.h5')
