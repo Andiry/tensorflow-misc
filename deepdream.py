@@ -1,5 +1,9 @@
 from keras.applications import inception_v3
 from keras import backend as K
+import scipy
+import os
+import sys
+from keras.preprocessing import image
 
 K.set_learning_phase(0)
 
@@ -60,6 +64,13 @@ max_loss = 10.
 
 base_image_path = '/root/Downloads/T34.jpg'
 
+def preprocess_image(image_path):
+    img = image.load_img(image_path)
+    img = image.img_to_array(img)
+    img = np.expand_dims(img, axis = 0)
+    img = inception_v3.preprocess_input(img)
+    return img
+
 img = preprocess_image(base_image_path)
 
 original_shape = img.shape[1:3]
@@ -72,8 +83,33 @@ for i in range(1, num_octave):
 
 successive_shapes = successive_shapes[::-1]
 
+def resize_img(img, size):
+    img = np.copy(img)
+    factors = (1, float(size[0]) / img.shape[1], float(size[1]) / img.shape[2], 1)
+    return scipy.ndimage.zoom(img, factors, order = 1)
+
 original_img = np.copy(img)
 shrunk_img = resize_img(img, successive_shapes[0])
+
+def deprocess_image(x):
+    if K.image_data_format() == 'channels_first':
+        x = x.reshape((3, x.shape[2], x.shape[3]))
+        x = x.transpose((1, 2, 0))
+        pass
+    else:
+        x = x.reshape((x.shape[1], x.shape[2], 3))
+        pass
+
+    x /= 2.
+    x += 0.5
+    x *= 255.
+    x = np.clip(x, 0, 255).astype('uint8')
+    return x
+
+def save_img(img, fname):
+    pil_img = deprocess_image(np.copy(img))
+    scipy.misc.imsave(os.path.join('/root/Downloads', fname), pil_img)
+    return
 
 for shape in successive_shapes:
     print('Processing image shape', shape)
@@ -90,39 +126,4 @@ for shape in successive_shapes:
     pass
 
 save_img(img, fname = 'final_dream.png')
-
-import scipy
-from keras.preprocessing import image
-
-def resize_img(img, size):
-    img = np.copy(img)
-    factors = (1, float(size[0]) / img.shape(1), float(size[1]) / img.shape[2], 1)
-    return scipy.ndimage.zoom(img, factors, order = 1)
-
-def save_img(img, fname):
-    pil_img = deprocess_image(no.copy(img))
-    scipy.misc.imsave(os.path.join('/root/Downloads', fname), pil_img)
-    return
-
-def preprocess_image(image_path):
-    img = image.load_img(image_path)
-    img = image.img_to_array(img)
-    img = np.expand_dims(img, axis = 0)
-    img = inception_v3.preprocess_input(img)
-    return img
-
-def deprocess_image(x):
-    if K.image_data_format() == 'channels_first':
-        x = x.reshape((3, x.shape[2], x.shape[3]))
-        x = x.transpose((1, 2, 0))
-        pass
-    else:
-        x = x.reshape((x.shape[1], x.shape[2], 3))
-        pass
-
-    x /= 2.
-    x += 0.5
-    x *= 255.
-    x = np.clip(x, 0, 255).astype('uint8')
-    return x
 
