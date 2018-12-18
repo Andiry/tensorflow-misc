@@ -19,6 +19,6 @@ with tf.Graph().as_default():
     tf.train.write_graph(sess.graph, '/tmp/', 'while-concat.pbtxt')
     open('/tmp/while-concat-stepstats.pbtxt', 'w').write(str(run_metadata.step_stats))
 
-meta_graph_def = tf.train.export_meta_graph(filename='/tmp/while-concat.meta')
+    meta_graph_def = tf.train.export_meta_graph(filename='/tmp/while-concat.meta')
 
 
