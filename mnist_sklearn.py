@@ -33,8 +33,10 @@ def neuron_layer(X, n_neurons, name, activation=None):
 
 with tf.name_scope("dnn"):
   hidden1 = tf.layers.dense(X, n_hidden1, name="hidden1", activation=tf.nn.relu)
-  hidden2 = tf.layers.dense(hidden1, n_hidden2, name="hidden2", activation=tf.nn.relu)
-  logits = tf.layers.dense(hidden2, n_outputs, name="outputs")
+  h1_drop = tf.layers.dropout(hidden1, 0.5)
+  hidden2 = tf.layers.dense(h1_drop, n_hidden2, name="hidden2", activation=tf.nn.relu)
+  h2_drop = tf.layers.dropout(hidden2, 0.5)
+  logits = tf.layers.dense(h2_drop, n_outputs, name="outputs")
 
 with tf.name_scope("loss"):
   xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=logits)
