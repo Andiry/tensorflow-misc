@@ -78,5 +78,7 @@ with tf.Session() as sess:
   save_path = saver.save(sess, "./mnist_final.ckpt")
   tf.train.write_graph(sess.graph, '/tmp/', 'mnist.pbtxt')
   open('/tmp/mnist-stepstats.pbtxt', 'w').write(str(run_metadata.step_stats))
+  writer = tf.summary.FileWriter('/tmp/mnist', sess.graph)
+  writer.close()
 
 meta_graph_def = tf.train.export_meta_graph(filename='/tmp/mnist.meta')
