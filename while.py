@@ -35,6 +35,8 @@ def main(argv):
     print(sess.run(r, options=options, run_metadata=run_metadata))
     tf.train.write_graph(sess.graph, '/tmp/', 'while.pbtxt')
     open('/tmp/while-stepstats.pbtxt', 'w').write(str(run_metadata.step_stats))
+    writer = tf.summary.FileWriter('/tmp/while', sess.graph)
+    writer.close()
 
   meta_graph_def = tf.train.export_meta_graph(filename='/tmp/while.meta')
 

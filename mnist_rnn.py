@@ -51,6 +51,8 @@ with tf.Session() as sess:
     acc_test = accuracy.eval(feed_dict = {X:X_test, y:y_test})
     print(epoch, "Train accuracy: ", acc_train, "Test accuracy: ", acc_test)
 
+  writer = tf.summary.FileWriter('/tmp/mnist_rnn', sess.graph)
+  writer.close()
   tf.train.write_graph(sess.graph, '/tmp/', 'mnist_rnn.pbtxt')
   open('/tmp/mnist_rnn-stepstats.pbtxt', 'w').write(str(run_metadata.step_stats))
 
