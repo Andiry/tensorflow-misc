@@ -20,5 +20,7 @@ with tf.Graph().as_default():
     open('/tmp/while-concat-stepstats.pbtxt', 'w').write(str(run_metadata.step_stats))
 
     meta_graph_def = tf.train.export_meta_graph(filename='/tmp/while-concat.meta')
+    writer = tf.summary.FileWriter('/tmp/while-concat', sess.graph)
+    writer.close()
 
 
