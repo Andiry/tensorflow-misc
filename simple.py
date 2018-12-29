@@ -15,6 +15,8 @@ with tf.Session() as sess:
     print(sess.run(f, options=options, run_metadata=run_metadata))
     tf.train.write_graph(sess.graph, '/tmp/', 'simple.pbtxt')
     open('/tmp/simple-stepstats.pbtxt', 'w').write(str(run_metadata.step_stats))
+    writer = tf.summary.FileWriter('/tmp/simple', sess.graph)
+    writer.close()
 
 meta_graph_def = tf.train.export_meta_graph(filename='/tmp/simple.meta')
 
