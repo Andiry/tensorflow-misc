@@ -166,6 +166,7 @@ def main(_):
       tf.train.write_graph(sess.graph, dump_dir, graph_path)
       open(step_stats_path, 'w').write(str(run_metadata.step_stats))
       writer = tf.summary.FileWriter(tensorboard_path, sess.graph)
+      writer.add_run_metadata(run_metadata, 'step%03d' % i)
       writer.close()
       meta_graph_def = tf.train.export_meta_graph(filename=meta_graph_path)
 
