@@ -3,7 +3,7 @@ import os
 import sys
 import reader
 
-DATA_PATH = "../simple-examples/data/"
+DATA_PATH = "/data/ptb/data/"
 train_data, valid_data, test_data, _ = reader.ptb_raw_data(DATA_PATH)
 print(len(train_data))
 print(train_data[:100])
