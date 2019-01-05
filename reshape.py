@@ -2,6 +2,7 @@ import tensorflow as tf
 
 x = tf.ones([5, 4])
 y = tf.reshape(x, [-1, 10])
+z = tf.add(y, 1)
 
 init = tf.global_variables_initializer()
 
@@ -17,7 +18,7 @@ meta_graph_path =  ''.join([dump_dir, name, '.meta'])
 
 with tf.Session() as sess:
     init.run()
-    print(sess.run(y, options=options, run_metadata=run_metadata))
+    print(sess.run(z, options=options, run_metadata=run_metadata))
     tf.train.write_graph(sess.graph, dump_dir, graph_path)
     open(step_stats_path, 'w').write(str(run_metadata.step_stats))
     writer = tf.summary.FileWriter(tensorboard_path, sess.graph)
