@@ -7,7 +7,9 @@ f = x * x * y + y + 2
 
 init = tf.global_variables_initializer()
 
-options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+options = tf.RunOptions()
+options.output_partition_graphs = True
+options.trace_level = tf.RunOptions.FULL_TRACE
 run_metadata = tf.RunMetadata()
 
 name = 'simple'

@@ -11,13 +11,17 @@ with tf.Graph().as_default():
       c, b, loop_vars=[i0, m0],
       shape_invariants=[i0.get_shape(), tf.TensorShape([None, 2])])
 
-  options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+  options = tf.RunOptions()
+  options.output_partition_graphs = True
+  options.trace_level = tf.RunOptions.FULL_TRACE
+
   run_metadata = tf.RunMetadata()
 
   with tf.Session() as sess:
     print(sess.run(r, options=options, run_metadata=run_metadata))
     tf.train.write_graph(sess.graph, '/tmp/', 'while-concat.pbtxt')
     open('/tmp/while-concat-stepstats.pbtxt', 'w').write(str(run_metadata.step_stats))
+    open('/tmp/while-concat-graphdef.pbtxt', 'w').write(str(run_metadata.partition_graphs))
 
     meta_graph_def = tf.train.export_meta_graph(filename='/tmp/while-concat.meta')
     writer = tf.summary.FileWriter('/tmp/while-concat', sess.graph)
