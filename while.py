@@ -30,7 +30,7 @@ def main(argv):
   run_metadata = tf.RunMetadata()
 
   print('Start...')
-  with tf.Session() as sess:
+  with tf.Session(target="local") as sess:
     sess.run(init)
     print(sess.run(r, options=options, run_metadata=run_metadata))
     tf.train.write_graph(sess.graph, '/tmp/', 'while.pbtxt')
