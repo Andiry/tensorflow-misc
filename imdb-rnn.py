@@ -28,11 +28,12 @@ print('input_test shape:', input_test.shape)
 
 
 from keras.models import Sequential
-from keras.layers import Embedding, SimpleRNN, Dense
+from keras.layers import Embedding, SimpleRNN, Dense, LSTM
 
 model = Sequential()
 model.add(Embedding(max_features, 32))
-model.add(SimpleRNN(32))
+#model.add(SimpleRNN(32))
+model.add(LSTM(32))
 model.add(Dense(1, activation='sigmoid'))
 model.summary()
 
