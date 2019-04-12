@@ -72,16 +72,25 @@ class Model(tf.keras.Model):
     self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
 
     if tf.test.is_gpu_available():
-      self.gru = tf.keras.layers.CuDNNGRU(self.units,
-                                          return_sequences=True,
-                                          recurrent_initializer='glorot_uniform',
-                                          stateful=True)
+      self.gru1 = tf.keras.layers.CuDNNGRU(self.units,
+                                           return_sequences=True,
+                                           recurrent_initializer='glorot_uniform',
+                                           stateful=True)
+      self.gru2 = tf.keras.layers.CuDNNGRU(self.units,
+                                           return_sequences=True,
+                                           recurrent_initializer='glorot_uniform',
+                                           stateful=True)
     else:
-      self.gru = tf.keras.layers.GRU(self.units,
-                                     return_sequences=True,
-                                     recurrent_activation='sigmoid',
-                                     recurrent_initializer='glorot_uniform',
-                                     stateful=True)
+      self.gru1 = tf.keras.layers.GRU(self.units,
+                                      return_sequences=True,
+                                      recurrent_activation='sigmoid',
+                                      recurrent_initializer='glorot_uniform',
+                                      stateful=True)
+      self.gru2 = tf.keras.layers.GRU(self.units,
+                                      return_sequences=True,
+                                      recurrent_activation='sigmoid',
+                                      recurrent_initializer='glorot_uniform',
+                                      stateful=True)
 
     self.fc = tf.keras.layers.Dense(vocab_size)
 
@@ -90,7 +99,8 @@ class Model(tf.keras.Model):
 
     # output at every time step
     # output shape == (batch_size, seq_length, hidden_size)
-    output = self.gru(embedding)
+    middle = self.gru1(embedding)
+    output = self.gru2(middle)
 
     # The dense layer will output predictions for every time_steps(seq_length)
     # output shape after the dense layer == (seq_length * batch_size, vocab_size)
@@ -127,7 +137,7 @@ checkpoint_dir = './training_checkpoints'
 # Name of the checkpoint files
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 
-EPOCHS = 5
+EPOCHS = 30
 
 # Training
 for epoch in range(EPOCHS):
