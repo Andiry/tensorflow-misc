@@ -3,6 +3,7 @@
 TODO(andiryxu): DO NOT SUBMIT without a detailed description of imdb-rnn.
 """
 
+import keras
 from keras.datasets import imdb
 from keras.preprocessing import sequence
 
@@ -31,17 +32,27 @@ from keras.models import Sequential
 from keras.layers import Embedding, SimpleRNN, Dense, LSTM
 
 model = Sequential()
-model.add(Embedding(max_features, 32))
+model.add(Embedding(max_features, 32, input_length=maxlen,name='embed'))
 #model.add(SimpleRNN(32))
 model.add(LSTM(32))
 model.add(Dense(1, activation='sigmoid'))
 model.summary()
 
+callbacks = [
+  keras.callbacks.TensorBoard(
+		  log_dir='/tmp/imdb',
+		  histogram_freq=1,
+		  embeddings_freq=1,
+		  embeddings_data=input_test
+		  )
+]
+
 model.compile(optimizer='rmsprop', loss='binary_crossentropy', metrics=['acc'])
 history = model.fit(input_train, y_train,
                     epochs=10,
                     batch_size=128,
-                    validation_split=0.2)
+                    validation_split=0.2,
+		    callbacks=callbacks)
 
 
 import matplotlib.pyplot as plt
