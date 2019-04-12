@@ -13,6 +13,7 @@ y = tf.placeholder(tf.int32, [None])
 
 basic_cell = tf.contrib.rnn.BasicRNNCell(num_units = nn)
 outputs, states = tf.nn.dynamic_rnn(basic_cell, X, dtype = tf.float32)
+print(outputs.shape, states.shape)
 
 logits = fc(states, no, activation_fn=None)
 xentropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
