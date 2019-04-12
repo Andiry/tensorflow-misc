@@ -54,9 +54,15 @@ def sample(preds, temperature = 1.0):
 import random
 import sys
 
+callbacks = [
+    keras.callbacks.TensorBoard(
+        log_dir='/tmp/nietzsche',
+    )
+]
+
 for epoch in range(1, 60):
     print('epoch', epoch)
-    model.fit(x, y, batch_size = 128, epochs = 1)
+    model.fit(x, y, batch_size = 128, epochs = 1, callbacks=callbacks)
     start_index = random.randint(0, len(text) - maxlen - 1)
     generated_text = text[start_index : start_index + maxlen]
     print('--- Generating with seed: "' + generated_text + '"')
