@@ -1,3 +1,6 @@
+"""
+Run ptb-data.py to generate ptb token files first.
+"""
 import tensorflow as tf
 import numpy as np
 
@@ -83,14 +86,29 @@ class PTBModel(object):
     self.train_op = optimizer.apply_gradients(
         zip(grads, trainable_variables))
 
+def dump_stats(sess, run_metadata, step):
+  name = 'ptb-rnn'
+  dump_dir = '/tmp/'
+  graph_path = ''.join([name, '.pbtxt'])
+  step_stats_path = ''.join([dump_dir, name, '-stepstats.pbtxt'])
+  tensorboard_path = ''.join([dump_dir, name])
+  meta_graph_path =  ''.join([dump_dir, name, '.meta'])
 
-def run_epoch(session, model, batches, train_op, output_log, step,
-              run_metadata):
+  tf.train.write_graph(sess.graph, dump_dir, graph_path)
+  open(step_stats_path, 'w').write(str(run_metadata.step_stats))
+  writer = tf.summary.FileWriter(tensorboard_path, sess.graph)
+  writer.add_run_metadata(run_metadata, 'step%03d' % step)
+  writer.close()
+  meta_graph_def = tf.train.export_meta_graph(filename=meta_graph_path)
+
+
+def run_epoch(session, model, batches, train_op, output_log, step):
   total_costs = 0.0
   iters = 0
   state = session.run(model.initial_state)
 
   options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+  run_metadata = tf.RunMetadata() if output_log else None
 
   for inputs, targets in batches:
     cost, state, _ = session.run(
@@ -106,6 +124,7 @@ def run_epoch(session, model, batches, train_op, output_log, step,
     if output_log and step % 100 == 0:
       print("After %d steps, perplexity %.3f" % (
           step, np.exp(total_costs / iters)))
+      dump_stats(session, run_metadata, step)
 
     step += 1
 
@@ -123,14 +142,6 @@ def main(_):
                          reuse=True, initializer=initializer):
     eval_model = PTBModel(False, EVAL_BATCH_SIZE, EVAL_NUM_STEP)
 
-  name = 'ptb-rnn'
-  dump_dir = '/tmp/'
-  graph_path = ''.join([name, '.pbtxt'])
-  step_stats_path = ''.join([dump_dir, name, '-stepstats.pbtxt'])
-  tensorboard_path = ''.join([dump_dir, name])
-  meta_graph_path =  ''.join([dump_dir, name, '.meta'])
-  run_metadata = tf.RunMetadata()
-
   with tf.Session() as sess:
     tf.global_variables_initializer().run()
     train_batches = make_batches(read_data(TRAIN_DATA),
@@ -146,27 +157,18 @@ def main(_):
 
       print("Training")
       step, train_pplx = run_epoch(sess, train_model, train_batches, train_model.train_op,
-                                   True, step, run_metadata)
-
-      tf.train.write_graph(sess.graph, dump_dir, graph_path)
-      open(step_stats_path, 'w').write(str(run_metadata.step_stats))
-      writer = tf.summary.FileWriter(tensorboard_path, sess.graph)
-      writer.add_run_metadata(run_metadata, 'step%03d' % i)
-      writer.close()
-      meta_graph_def = tf.train.export_meta_graph(filename=meta_graph_path)
+                                   True, step)
       print("Epoch: %d Train Perpexity: %3.f" % (i + 1, train_pplx))
 
       print("Evaluating")
       _, valid_perplexity = run_epoch(
-          sess, eval_model, eval_batches, tf.no_op(), False, 0,
-          run_metadata)
+          sess, eval_model, eval_batches, tf.no_op(), False, 0)
       print("Epoch: %d, Validation perplexity %.3f" %(
           i + 1, valid_perplexity))
 
       print("Testing")
       test_perplexity = run_epoch(
-          sess, eval_model, test_batches, tf.no_op(), False, 0,
-          run_metadata)
+          sess, eval_model, test_batches, tf.no_op(), False, 0)
       print("Test perplexity %.3f" % test_perplexity)
 
 
