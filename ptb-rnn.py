@@ -1,22 +1,25 @@
 import tensorflow as tf
 import numpy as np
-import reader
 
-DATA_PATH = '/data/ptb/data'
-HIDDEN_SIZE = 200
+from ptb_batch import read_data, make_batches
+
+TRAIN_DATA = "ptb.train"
+EVAL_DATA = "ptb.valid"
+TEST_DATA = "ptb.test"
+HIDDEN_SIZE = 300
 NUM_LAYERS = 2
 VOCAB_SIZE = 10000
-
-LEARNING_RATE = 1.0
 TRAIN_BATCH_SIZE = 20
 TRAIN_NUM_STEP = 35
 
 EVAL_BATCH_SIZE = 1
 EVAL_NUM_STEP = 1
-NUM_EPOCH = 2
-KEEP_PROB = 0.5
-
+NUM_EPOCH = 5
+LSTM_KEEP_PROB = 0.9
+EMBEDDING_KEEP_PROB = 0.9
 MAX_GRAD_NORM = 5
+SHARE_EMB_AND_SOFTMAX = True
+
 
 class PTBModel(object):
   def __init__(self, is_training, batch_size, num_steps):
@@ -25,12 +28,13 @@ class PTBModel(object):
     self.input_data = tf.placeholder(tf.int32, [batch_size, num_steps])
     self.targets = tf.placeholder(tf.int32, [batch_size, num_steps])
 
-    lstm_cell = tf.contrib.rnn.BasicLSTMCell(HIDDEN_SIZE)
-    if is_training:
-      lstm_cell = tf.contrib.rnn.DropoutWrapper(lstm_cell,
-                                                output_keep_prob = KEEP_PROB)
-      pass
-    cell = tf.contrib.rnn.MultiRNNCell([lstm_cell] * NUM_LAYERS)
+    dropout_keep_prob = LSTM_KEEP_PROB if is_training else 1.0
+    lstm_cells = [
+        tf.nn.rnn_cell.DropoutWrapper(
+            tf.nn.rnn_cell.LSTMCell(HIDDEN_SIZE),
+            output_keep_prob=dropout_keep_prob)
+        for _ in range(NUM_LAYERS)]
+    cell = tf.nn.rnn_cell.MultiRNNCell(lstm_cells)
 
     self.initial_state = cell.zero_state(batch_size, tf.float32)
     embedding = tf.get_variable("embedding", [VOCAB_SIZE, HIDDEN_SIZE])
@@ -38,7 +42,7 @@ class PTBModel(object):
     inputs = tf.nn.embedding_lookup(embedding, self.input_data)
 
     if is_training:
-      inputs = tf.nn.dropout(inputs, KEEP_PROB)
+      inputs = tf.nn.dropout(inputs, EMBEDDING_KEEP_PROB)
       pass
 
     outputs = []
@@ -52,7 +56,11 @@ class PTBModel(object):
 
     output = tf.reshape(tf.concat(outputs, 1), [-1, HIDDEN_SIZE])
 
-    weight = tf.get_variable('weight', [HIDDEN_SIZE, VOCAB_SIZE])
+    if SHARE_EMB_AND_SOFTMAX:
+      weight = tf.transpose(embedding)
+    else:
+      weight = tf.get_variable("weight", [HIDDEN_SIZE, VOCAB_SIZE])
+
     bias = tf.get_variable('bias', [VOCAB_SIZE])
     logits = tf.matmul(output, weight) + bias
 
@@ -71,12 +79,12 @@ class PTBModel(object):
     grads, _ = tf.clip_by_global_norm(
         tf.gradients(self.cost, trainable_variables), MAX_GRAD_NORM)
 
-    optimizer = tf.train.GradientDescentOptimizer(LEARNING_RATE)
+    optimizer = tf.train.GradientDescentOptimizer(learning_rate = 1.0)
     self.train_op = optimizer.apply_gradients(
         zip(grads, trainable_variables))
 
 
-def run_epoch(session, model, data_queue, train_op, output_log, epoch_size,
+def run_epoch(session, model, batches, train_op, output_log, step,
               run_metadata):
   total_costs = 0.0
   iters = 0
@@ -84,19 +92,11 @@ def run_epoch(session, model, data_queue, train_op, output_log, epoch_size,
 
   options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
 
-  for step in range(epoch_size):
-    feed_dict = {}
-    x, y = session.run(data_queue)
-    feed_dict[model.input_data] = x
-    feed_dict[model.targets] = y
-
-    for i, (c, h) in enumerate(model.initial_state):
-      feed_dict[c] = state[i].c
-      feed_dict[h] = state[i].h
-
+  for inputs, targets in batches:
     cost, state, _ = session.run(
         [model.cost, model.final_state, train_op],
-        feed_dict=feed_dict,
+        {model.input_data: inputs, model.targets: targets,
+         model.initial_state: state},
         options=options,
         run_metadata=run_metadata)
 
@@ -107,24 +107,12 @@ def run_epoch(session, model, data_queue, train_op, output_log, epoch_size,
       print("After %d steps, perplexity %.3f" % (
           step, np.exp(total_costs / iters)))
 
-  return np.exp(total_costs / iters)
+    step += 1
+
+  return step, np.exp(total_costs / iters)
 
 
 def main(_):
-  train_data, valid_data, test_data, _ = reader.ptb_raw_data(DATA_PATH)
-
-  train_data_len = len(train_data)
-  train_batch_len = train_data_len // TRAIN_BATCH_SIZE  # batch的个数
-  train_epoch_size = (train_batch_len - 1) // TRAIN_NUM_STEP  # 该epoch的训练次数
-
-  valid_data_len = len(valid_data)
-  valid_batch_len = valid_data_len // EVAL_BATCH_SIZE
-  valid_epoch_size = (valid_batch_len - 1) // EVAL_NUM_STEP
-
-  test_data_len = len(test_data)
-  test_batch_len = test_data_len // EVAL_BATCH_SIZE
-  test_epoch_size = (test_batch_len - 1) // EVAL_NUM_STEP
-
   initializer = tf.random_uniform_initializer(-0.05, 0.05)
 
   with tf.variable_scope("language_model",
@@ -134,13 +122,6 @@ def main(_):
   with tf.variable_scope("language_model",
                          reuse=True, initializer=initializer):
     eval_model = PTBModel(False, EVAL_BATCH_SIZE, EVAL_NUM_STEP)
-
-  train_queue = reader.ptb_producer(train_data, train_model.batch_size,
-                                    train_model.num_steps)
-  valid_queue = reader.ptb_producer(valid_data, eval_model.batch_size,
-                                    eval_model.num_steps)
-  test_queue = reader.ptb_producer(test_data, eval_model.batch_size,
-                                   eval_model.num_steps)
 
   name = 'ptb-rnn'
   dump_dir = '/tmp/'
@@ -152,16 +133,20 @@ def main(_):
 
   with tf.Session() as sess:
     tf.global_variables_initializer().run()
+    train_batches = make_batches(read_data(TRAIN_DATA),
+                                 TRAIN_BATCH_SIZE, TRAIN_NUM_STEP)
+    eval_batches = make_batches(read_data(EVAL_DATA),
+                                EVAL_BATCH_SIZE, EVAL_NUM_STEP)
+    test_batches = make_batches(read_data(TEST_DATA),
+                                EVAL_BATCH_SIZE, EVAL_NUM_STEP)
 
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
-
+    step = 0
     for i in range(NUM_EPOCH):
       print("Interation %d" % (i + 1))
 
       print("Training")
-      run_epoch(sess, train_model, train_queue, train_model.train_op,
-                True, train_epoch_size, run_metadata)
+      step, train_pplx = run_epoch(sess, train_model, train_batches, train_model.train_op,
+                                   True, step, run_metadata)
 
       tf.train.write_graph(sess.graph, dump_dir, graph_path)
       open(step_stats_path, 'w').write(str(run_metadata.step_stats))
@@ -169,22 +154,20 @@ def main(_):
       writer.add_run_metadata(run_metadata, 'step%03d' % i)
       writer.close()
       meta_graph_def = tf.train.export_meta_graph(filename=meta_graph_path)
+      print("Epoch: %d Train Perpexity: %3.f" % (i + 1, train_pplx))
 
       print("Evaluating")
-      valid_perplexity = run_epoch(
-          sess, eval_model, valid_queue, tf.no_op(), True, valid_epoch_size,
+      _, valid_perplexity = run_epoch(
+          sess, eval_model, eval_batches, tf.no_op(), False, 0,
           run_metadata)
       print("Epoch: %d, Validation perplexity %.3f" %(
           i + 1, valid_perplexity))
 
       print("Testing")
       test_perplexity = run_epoch(
-          sess, eval_model, test_queue, tf.no_op(), True, test_epoch_size,
+          sess, eval_model, test_batches, tf.no_op(), False, 0,
           run_metadata)
       print("Test perplexity %.3f" % test_perplexity)
-
-      coord.request_stop()
-      coord.join(threads)
 
 
 if __name__ == "__main__":
