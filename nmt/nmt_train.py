@@ -13,7 +13,7 @@ from nmt_data import *
 SRC_TRAIN_DATA = "/data/en-zh/train.tags.en-zh.en.deletehtml.segment.id"
 TRG_TRAIN_DATA = "/data/en-zh/train.tags.en-zh.zh.deletehtml.segment.id"
 
-CHECKPOINT_PATH = "./seq2seq_ckpt"
+CHECKPOINT_PATH = "./checkpoint/seq2seq_ckpt"
 HIDDEN_SIZE = 1024
 NUM_LAYERS = 2
 SRC_VOCAB_SIZE = 10000
