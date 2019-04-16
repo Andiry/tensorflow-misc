@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 from stanfordcorenlp import StanfordCoreNLP
+import sys
 
 CHECKPOINT_PATH = "./checkpoint/seq2seq_ckpt-30000"
 
@@ -100,9 +101,13 @@ def dump_stats(sess, run_metadata, step):
 
 
 def main(argv):
+  if len(sys.argv) < 2:
+    print("paramemter error: need input.")
+    sys.exit(0)
+  test_sentence = sys.argv[1]
+
   nlp = StanfordCoreNLP("/data/stanford-corenlp-full-2018-10-05", lang='en')
   vocab_file = "/data/en-zh/train.tags.en-zh.en.deletehtml.vocab"
-  test_sentence = "Everyday we create our history."
 
   with open(vocab_file, 'r') as f:
     data = f.readlines()
