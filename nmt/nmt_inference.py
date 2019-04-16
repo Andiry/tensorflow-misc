@@ -83,6 +83,22 @@ class NMTModel(object):
 
       return trg_ids.stack()
 
+def dump_stats(sess, run_metadata, step):
+  name = 'nmt-infer'
+  dump_dir = '/tmp/'
+  graph_path = ''.join([name, '.pbtxt'])
+  step_stats_path = ''.join([dump_dir, name, '-stepstats.pbtxt'])
+  tensorboard_path = ''.join([dump_dir, name])
+  meta_graph_path =  ''.join([dump_dir, name, '.meta'])
+
+  tf.train.write_graph(sess.graph, dump_dir, graph_path)
+  open(step_stats_path, 'w').write(str(run_metadata.step_stats))
+  writer = tf.summary.FileWriter(tensorboard_path, sess.graph)
+  writer.add_run_metadata(run_metadata, 'step%03d' % step)
+  writer.close()
+  meta_graph_def = tf.train.export_meta_graph(filename=meta_graph_path)
+
+
 def main(argv):
   nlp = StanfordCoreNLP("/data/stanford-corenlp-full-2018-10-05", lang='en')
   vocab_file = "/data/en-zh/train.tags.en-zh.en.deletehtml.vocab"
@@ -108,7 +124,12 @@ def main(argv):
   saver = tf.train.Saver()
   saver.restore(sess, CHECKPOINT_PATH)
 
-  output = sess.run(output_op)
+  options = tf.RunOptions(trace_level=tf.RunOptions.FULL_TRACE)
+  run_metadata = tf.RunMetadata()
+
+  output = sess.run(output_op,
+                    options=options,
+                    run_metadata=run_metadata)
   print(output)
   output = [i for i in output if i > 2]
 
@@ -122,6 +143,8 @@ def main(argv):
   for word in id_to_word:
     print(word, end='')
   print('\n')
+
+  dump_stats(sess, run_metadata, 0)
 
   sess.close()
   nlp.close()
