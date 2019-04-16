@@ -10,7 +10,7 @@ from __future__ import print_function
 import tensorflow as tf
 from stanfordcorenlp import StanfordCoreNLP
 
-CHECKPOINT_PATH = "./checkpoint/seq2seq_ckpt-5000"
+CHECKPOINT_PATH = "./checkpoint/seq2seq_ckpt-30000"
 
 HIDDEN_SIZE = 1024
 NUM_LAYERS = 2
