@@ -27,7 +27,8 @@ step_stats_path = ''.join([dump_dir, name, '-stepstats.pbtxt'])
 tensorboard_path = ''.join([dump_dir, name])
 meta_graph_path =  ''.join([dump_dir, name, '.meta'])
 
-with tf.Session() as sess:
+with tf.device('/gpu:0'):
+  with tf.Session() as sess:
     print(sess.run(y1, options=options, run_metadata=run_metadata))
     tf.train.write_graph(sess.graph, dump_dir, graph_path)
     open(step_stats_path, 'w').write(str(run_metadata.step_stats))
